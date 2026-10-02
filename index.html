@@ -11,7 +11,7 @@
 
   <!-- Registration Modal Overlay -->
   <div id="onboardingModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-6">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
       
       <div class="text-center">
         <h2 class="text-2xl font-bold text-rose-600">❤️ Create Your Profile</h2>
@@ -22,12 +22,21 @@
       <div id="errorBox" class="hidden p-3 bg-red-100 border border-red-400 text-red-700 text-xs rounded-xl break-words"></div>
 
       <form id="profileForm" class="space-y-4">
+        <!-- Full Name -->
         <div>
           <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Full Name</label>
           <input type="text" id="fullName" required placeholder="e.g. Bethlehem Abebe"
                  class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-rose-500">
         </div>
 
+        <!-- Profile Photo File Input -->
+        <div>
+          <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Profile Photo</label>
+          <input type="file" id="avatarFile" accept="image/*" required
+                 class="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-rose-50 file:text-rose-600 hover:file:bg-rose-100">
+        </div>
+
+        <!-- Age & City -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Age</label>
@@ -43,10 +52,13 @@
               <option value="Hawassa">Hawassa (ሐዋሳ)</option>
               <option value="Dire Dawa">Dire Dawa (ድሬዳዋ)</option>
               <option value="Gondar">Gondar (ጎንደር)</option>
+              <option value="Mekelle">Mekelle (መቀሌ)</option>
+              <option value="Adama">Adama (አዳማ)</option>
             </select>
           </div>
         </div>
 
+        <!-- Relationship Goal -->
         <div>
           <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Relationship Goal</label>
           <select id="intent" required class="w-full px-3 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white text-sm">
@@ -57,6 +69,7 @@
           </select>
         </div>
 
+        <!-- Submit Button -->
         <button type="submit" id="submitBtn"
                 class="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow-md transition-all duration-200">
           Save & Start Swiping
@@ -73,11 +86,9 @@
     </header>
 
     <div class="my-auto bg-white rounded-3xl shadow-lg border border-gray-100 p-6 text-center space-y-4">
-      <div class="w-24 h-24 rounded-full bg-rose-100 mx-auto flex items-center justify-center text-rose-500 text-3xl font-bold">
-        ❤️
-      </div>
-      <h2 class="text-2xl font-bold text-gray-800">You're All Set!</h2>
-      <p class="text-gray-500 text-sm">Welcome to Habesha Match. Your profile has been created successfully.</p>
+      <img id="userAvatarPreview" class="w-28 h-28 rounded-full object-cover mx-auto shadow-md border-2 border-rose-500" src="" alt="Profile Photo">
+      <h2 id="userNameDisplay" class="text-2xl font-bold text-gray-800">You're All Set!</h2>
+      <p class="text-gray-500 text-sm">Welcome to Habesha Match. Your profile picture and details have been saved to Supabase.</p>
     </div>
   </main>
 
@@ -85,7 +96,6 @@
     const SUPABASE_URL = "https://ubvukfxtuxbyajngpmyd.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_G6CMV5kJgKgTVIuuP0iM2w_TVQ2IpeC";
     
-    // Initialize Supabase Client securely
     const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
     const onboardingModal = document.getElementById('onboardingModal');
@@ -93,14 +103,18 @@
     const profileForm = document.getElementById('profileForm');
     const userBadge = document.getElementById('userBadge');
     const errorBox = document.getElementById('errorBox');
+    const userAvatarPreview = document.getElementById('userAvatarPreview');
+    const userNameDisplay = document.getElementById('userNameDisplay');
 
     function showError(msg) {
       errorBox.innerText = msg;
       errorBox.classList.remove('hidden');
     }
 
-    if (!supabaseClient) {
-      showError("Error: Could not load Supabase client library. Check your internet connection.");
+    // Check local memory
+    const savedUser = JSON.parse(localStorage.getItem('habesha_user_profile'));
+    if (savedUser) {
+      showMainApp(savedUser.full_name, savedUser.avatar_url);
     }
 
     profileForm.addEventListener('submit', async (e) => {
@@ -109,37 +123,71 @@
 
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
-      submitBtn.innerText = 'Saving Profile...';
-
-      const profileData = {
-        full_name: document.getElementById('fullName').value.trim(),
-        age: parseInt(document.getElementById('age').value),
-        city: document.getElementById('city').value,
-        intent: document.getElementById('intent').value
-      };
+      submitBtn.innerText = 'Uploading photo & saving...';
 
       try {
+        const avatarFileInput = document.getElementById('avatarFile');
+        let avatarUrl = null;
+
+        // 1. Upload file to Supabase Storage if selected
+        if (avatarFileInput.files.length > 0) {
+          const file = avatarFileInput.files[0];
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+
+          const { data: uploadData, error: uploadError } = await supabaseClient.storage
+            .from('avatars')
+            .upload(fileName, file);
+
+          if (uploadError) {
+            throw new Error("Photo upload failed: " + uploadError.message);
+          }
+
+          // Get Public URL
+          const { data: publicUrlData } = supabaseClient.storage
+            .from('avatars')
+            .getPublicUrl(fileName);
+
+          avatarUrl = publicUrlData.publicUrl;
+        }
+
+        // 2. Insert record into profiles table
+        const profileData = {
+          full_name: document.getElementById('fullName').value.trim(),
+          age: parseInt(document.getElementById('age').value),
+          city: document.getElementById('city').value,
+          intent: document.getElementById('intent').value,
+          avatar_url: avatarUrl
+        };
+
         const { data, error } = await supabaseClient
           .from('profiles')
           .insert([profileData])
           .select();
 
-        if (error) {
-          throw new Error(error.message + " (Code: " + error.code + ")");
-        }
+        if (error) throw new Error("Database insert failed: " + error.message);
 
-        showMainApp(profileData.full_name);
+        // Save locally
+        localStorage.setItem('habesha_user_profile', JSON.stringify(profileData));
+
+        showMainApp(profileData.full_name, profileData.avatar_url);
       } catch (err) {
-        showError("Database Save Failed: " + err.message);
+        showError(err.message);
         submitBtn.disabled = false;
         submitBtn.innerText = 'Save & Start Swiping';
       }
     });
 
-    function showMainApp(name) {
+    function showMainApp(name, avatar) {
       onboardingModal.classList.add('hidden');
       appContainer.classList.remove('hidden');
       userBadge.innerText = `👋 ${name}`;
+      userNameDisplay.innerText = `Welcome, ${name}!`;
+      if (avatar) {
+        userAvatarPreview.src = avatar;
+      } else {
+        userAvatarPreview.src = 'https://via.placeholder.com/150?text=User';
+      }
     }
   </script>
 </body>
