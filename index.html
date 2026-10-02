@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ethio Match</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Noto Sans Ethiopic', sans-serif; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-between pb-16">
+
+  <!-- TOP HEADER & LANGUAGE SWITCHER -->
+  <header class="w-full max-w-md bg-white border-b px-4 py-3 flex justify-between items-center shadow-sm">
+    <h1 class="text-xl font-bold text-pink-600 flex items-center gap-1">
+      ❤️ Ethio Match
+    </h1>
+    <select id="langSelect" onchange="changeLanguage(this.value)" class="border rounded px-2 py-1 text-sm bg-gray-50 border-gray-300">
+      <option value="en">English 🇬🇧</option>
+      <option value="am">አማርኛ 🇪🇹</option>
+      <option value="om">Afaan Oromoo 🇪🇹</option>
+    </select>
+  </header>
+
+  <!-- MAIN CONTAINER / SWIPE CARD -->
+  <main class="w-full max-w-md p-4 flex-1 flex flex-col justify-center">
+    <div id="cardDeck" class="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 relative">
+      <div class="relative h-96 bg-gray-300">
+        <img id="profileImg" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=600" class="w-full h-full object-cover" alt="Profile">
+        <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 text-white">
+          <div class="flex items-center gap-2">
+            <h2 id="profileName" class="text-2xl font-bold">Selam, 23</h2>
+            <span class="bg-blue-500 text-xs px-2 py-0.5 rounded-full font-medium" id="verifiedBadge">✓ Verified</span>
+          </div>
+          <p id="profileCity" class="text-sm opacity-90">📍 Addis Ababa</p>
+          <p id="profileIntent" class="text-xs bg-pink-500/80 inline-block px-2 py-1 rounded mt-2">ለፅኑ ግንኙነት / ጋብቻ</p>
+        </div>
+      </div>
+      <div class="p-4 bg-white">
+        <p id="profileBio" class="text-gray-700 text-sm">Passionate about tech, traditional coffee ceremonies, and weekend trips.</p>
+      </div>
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="flex justify-center items-center gap-6 mt-6">
+      <button onclick="handleSwipe('pass')" class="w-14 h-14 rounded-full bg-white border border-red-200 shadow-lg text-red-500 text-2xl flex items-center justify-center hover:scale-110 transition-transform">
+        ✕
+      </button>
+      <button onclick="handleSwipe('like')" class="w-16 h-16 rounded-full bg-gradient-to-r from-pink-500 to-red-500 shadow-lg text-white text-3xl flex items-center justify-center hover:scale-110 transition-transform">
+        ❤️
+      </button>
+    </div>
+  </main>
+
+  <!-- BOTTOM NAVIGATION BAR -->
+  <nav class="fixed bottom-0 inset-x-0 bg-white border-t flex justify-around py-2 max-w-md mx-auto shadow-lg">
+    <button class="flex flex-col items-center text-pink-600 font-semibold" id="navDiscover">
+      <span class="text-lg">🔥</span>
+      <span class="text-xs" id="tDiscover">Discover</span>
+    </button>
+    <button class="flex flex-col items-center text-gray-500 hover:text-pink-600" id="navLikes">
+      <span class="text-lg">💖</span>
+      <span class="text-xs" id="tLikes">Likes</span>
+    </button>
+    <button class="flex flex-col items-center text-gray-500 hover:text-pink-600" id="navMessages">
+      <span class="text-lg">💬</span>
+      <span class="text-xs" id="tMessages">Messages</span>
+    </button>
+    <button class="flex flex-col items-center text-gray-500 hover:text-pink-600" id="navProfile">
+      <span class="text-lg">👤</span>
+      <span class="text-xs" id="tProfile">Profile</span>
+    </button>
+  </nav>
+
+  <!-- JS LOCALIZATION & SUPABASE CONFIG -->
+  <script>
+    // 1. SUPABASE CREDENTIALS (REPLACE WITH YOUR KEYS)
+    const SUPABASE_URL = "YOUR_SUPABASE_URL_HERE";
+    const SUPABASE_KEY = "YOUR_SUPABASE_PUBLISHABLE_KEY_HERE";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // 2. DICTIONARY
+    const translations = {
+      en: {
+        discover: "Discover", likes: "Likes", messages: "Messages", profile: "Profile",
+        intent: "Serious Relationship / Marriage", bio: "Passionate about tech, traditional coffee ceremonies, and weekend trips."
+      },
+      am: {
+        discover: "ፈልግ", likes: "የወደዱህ", messages: "መልእክቶች", profile: "ፕሮፋይል",
+        intent: "ለፅኑ ግንኙነት / ጋብቻ", bio: "ስለ ቴክኖሎጂ፣ ባህላዊ የቡና ሥነ-ሥርዓት እና ቅዳሜ እሑድ ጉዞዎች እወዳለሁ።"
+      },
+      om: {
+        discover: "Barbaadi", likes: "Warra Si Jaallatan", messages: "Ergaawwan", profile: "Puroofaayilii",
+        intent: "Hariiroo Cimaa / Fuudhaa fi Heeruma", bio: "Teknoolojii, sirna buna aadaa fi imala dhuma torbanii baay'een jaalladha."
+      }
+    };
+
+    function changeLanguage(lang) {
+      const t = translations[lang] || translations.en;
+      document.getElementById("tDiscover").innerText = t.discover;
+      document.getElementById("tLikes").innerText = t.likes;
+      document.getElementById("tMessages").innerText = t.messages;
+      document.getElementById("tProfile").innerText = t.profile;
+      document.getElementById("profileIntent").innerText = t.intent;
+      document.getElementById("profileBio").innerText = t.bio;
+    }
+
+    function handleSwipe(action) {
+      const card = document.getElementById("cardDeck");
+      card.style.transform = action === 'like' ? 'translateX(100px) rotate(10deg)' : 'translateX(-100px) rotate(-10deg)';
+      card.style.opacity = '0';
+      setTimeout(() => {
+        card.style.transform = 'none';
+        card.style.opacity = '1';
+      }, 300);
+    }
+  </script>
+</body>
+</html>
