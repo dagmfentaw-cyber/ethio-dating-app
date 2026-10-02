@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Habesha Match - Ethio Dating App</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body class="bg-gray-100 font-sans antialiased text-gray-800">
@@ -19,15 +18,16 @@
         <p class="text-sm text-gray-500 mt-1">Join Habesha Match & start swiping</p>
       </div>
 
+      <!-- On-Screen Debug Error Box -->
+      <div id="errorBox" class="hidden p-3 bg-red-100 border border-red-400 text-red-700 text-xs rounded-xl break-words"></div>
+
       <form id="profileForm" class="space-y-4">
-        <!-- Full Name -->
         <div>
           <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Full Name</label>
           <input type="text" id="fullName" required placeholder="e.g. Bethlehem Abebe"
                  class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-rose-500">
         </div>
 
-        <!-- Age & City -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Age</label>
@@ -43,15 +43,10 @@
               <option value="Hawassa">Hawassa (ሐዋሳ)</option>
               <option value="Dire Dawa">Dire Dawa (ድሬዳዋ)</option>
               <option value="Gondar">Gondar (ጎንደር)</option>
-              <option value="Mekelle">Mekelle (መቀሌ)</option>
-              <option value="Bishoftu">Bishoftu (ቢሾፍቱ)</option>
-              <option value="Adama">Adama (አዳማ)</option>
-              <option value="Jimma">Jimma (ጅማ)</option>
             </select>
           </div>
         </div>
 
-        <!-- Dating Intent -->
         <div>
           <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Relationship Goal</label>
           <select id="intent" required class="w-full px-3 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white text-sm">
@@ -62,7 +57,6 @@
           </select>
         </div>
 
-        <!-- Submit Button -->
         <button type="submit" id="submitBtn"
                 class="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow-md transition-all duration-200">
           Save & Start Swiping
@@ -71,14 +65,13 @@
     </div>
   </div>
 
-  <!-- Main Swiping App Container -->
+  <!-- Main App Container -->
   <main id="appContainer" class="max-w-md mx-auto min-h-screen flex flex-col justify-between p-4 hidden">
     <header class="flex justify-between items-center py-2">
       <h1 class="text-xl font-black text-rose-600 tracking-wide">HabeshaMatch</h1>
       <span id="userBadge" class="text-xs bg-rose-100 text-rose-700 font-semibold px-3 py-1 rounded-full"></span>
     </header>
 
-    <!-- Card Container -->
     <div class="my-auto bg-white rounded-3xl shadow-lg border border-gray-100 p-6 text-center space-y-4">
       <div class="w-24 h-24 rounded-full bg-rose-100 mx-auto flex items-center justify-center text-rose-500 text-3xl font-bold">
         ❤️
@@ -89,25 +82,30 @@
   </main>
 
   <script>
-    // PRE-CONFIGURED SUPABASE CREDENTIALS
     const SUPABASE_URL = "https://ubvukfxtuxbyajngpmyd.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_G6CMV5kJgKgTVIuuP0iM2w_TVQ2IpeC";
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Initialize Supabase Client securely
+    const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
     const onboardingModal = document.getElementById('onboardingModal');
     const appContainer = document.getElementById('appContainer');
     const profileForm = document.getElementById('profileForm');
     const userBadge = document.getElementById('userBadge');
+    const errorBox = document.getElementById('errorBox');
 
-    // Check if user has already created a local session profile
-    const savedUser = JSON.parse(localStorage.getItem('habesha_user_profile'));
-    if (savedUser) {
-      showMainApp(savedUser.full_name);
+    function showError(msg) {
+      errorBox.innerText = msg;
+      errorBox.classList.remove('hidden');
     }
 
-    // Form Submit Handler
+    if (!supabaseClient) {
+      showError("Error: Could not load Supabase client library. Check your internet connection.");
+    }
+
     profileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
+      errorBox.classList.add('hidden');
 
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
@@ -121,21 +119,18 @@
       };
 
       try {
-        // Insert user record into Supabase profiles table
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
           .from('profiles')
           .insert([profileData])
           .select();
 
-        if (error) throw error;
+        if (error) {
+          throw new Error(error.message + " (Code: " + error.code + ")");
+        }
 
-        // Store profile in local storage for session memory
-        localStorage.setItem('habesha_user_profile', JSON.stringify(profileData));
-
-        // Show main application
         showMainApp(profileData.full_name);
       } catch (err) {
-        alert('Failed to create profile: ' + err.message);
+        showError("Database Save Failed: " + err.message);
         submitBtn.disabled = false;
         submitBtn.innerText = 'Save & Start Swiping';
       }
