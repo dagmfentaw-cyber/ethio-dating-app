@@ -290,22 +290,58 @@
       document.getElementById('cardImage').src = p.avatar_url || 'https://via.placeholder.com/400x500?text=Habesha+Match';
     }
 
-    // Swipe Card Action
-    function swipe(direction) {
-      if (currentIndex >= profiles.length) return;
+  // Updated Swipe Action Handler
+async function swipe(direction) {
+  if (currentIndex >= profiles.length) return;
 
-      if (direction === 'pass') {
-        profileCard.classList.add('card-swipe-left');
-      } else {
-        profileCard.classList.add('card-swipe-right');
+  const currentProfile = profiles[currentIndex];
+  const storedUser = JSON.parse(localStorage.getItem('habesha_user_profile'));
+
+  // Trigger Visual Swipe Animation
+  if (direction === 'pass') {
+    profileCard.classList.add('card-swipe-left');
+  } else {
+    profileCard.classList.add('card-swipe-right');
+  }
+
+  // Record action in Supabase
+  if (storedUser && storedUser.id && currentProfile.id) {
+    try {
+      const { data, error } = await supabaseClient.rpc('record_swipe', {
+        p_liker_id: storedUser.id,
+        p_liked_id: currentProfile.id,
+        p_action: direction
+      });
+
+      if (error) console.error("Swipe record error:", error.message);
+
+      // Check for mutual match
+      if (data && data.matched) {
+        showMatchNotification(currentProfile);
       }
-
-      setTimeout(() => {
-        currentIndex++;
-        profileCard.classList.remove('card-swipe-left', 'card-swipe-right');
-        renderCurrentCard();
-      }, 300);
+    } catch (err) {
+      console.error("Match processing failed:", err);
     }
+  }
+
+  // Advance Deck
+  setTimeout(() => {
+    currentIndex++;
+    profileCard.classList.remove('card-swipe-left', 'card-swipe-right');
+    renderCurrentCard();
+  }, 300);
+}
+
+// Display Match Modal
+function showMatchNotification(targetProfile) {
+  document.getElementById('matchedName').innerText = targetProfile.full_name || 'your match';
+  document.getElementById('matchUserAvatar').src = targetProfile.avatar_url || 'https://via.placeholder.com/150';
+  document.getElementById('matchModal').classList.remove('hidden');
+}
+
+function closeMatchModal() {
+  document.getElementById('matchModal').classList.add('hidden');
+}
 
     function showError(msg) {
       errorBox.innerText = msg;
