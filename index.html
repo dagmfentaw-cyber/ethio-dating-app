@@ -6,37 +6,49 @@
   <title>Habesha Match - Ethio Dating App</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    .card-swipe-left {
+      transform: translateX(-120%) rotate(-20deg) !important;
+      opacity: 0;
+      transition: all 0.35s ease-out;
+    }
+    .card-swipe-right {
+      transform: translateX(120%) rotate(20deg) !important;
+      opacity: 0;
+      transition: all 0.35s ease-out;
+    }
+    .card-enter {
+      transition: all 0.3s ease-in-out;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 font-sans antialiased text-gray-800">
+<body class="bg-gray-100 font-sans antialiased text-gray-800 min-h-screen flex flex-col justify-between">
 
   <!-- Registration Modal Overlay -->
   <div id="onboardingModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-5 max-h-[90vh] overflow-y-auto">
       
       <div class="text-center">
         <h2 class="text-2xl font-bold text-rose-600">❤️ Create Your Profile</h2>
         <p class="text-sm text-gray-500 mt-1">Join Habesha Match & start swiping</p>
       </div>
 
-      <!-- On-Screen Debug Error Box -->
+      <!-- Debug Error Box -->
       <div id="errorBox" class="hidden p-3 bg-red-100 border border-red-400 text-red-700 text-xs rounded-xl break-words"></div>
 
       <form id="profileForm" class="space-y-4">
-        <!-- Full Name -->
         <div>
           <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Full Name</label>
           <input type="text" id="fullName" required placeholder="e.g. Bethlehem Abebe"
                  class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-rose-500">
         </div>
 
-        <!-- Profile Photo File Input -->
         <div>
           <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Profile Photo</label>
           <input type="file" id="avatarFile" accept="image/*" required
                  class="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-rose-50 file:text-rose-600 hover:file:bg-rose-100">
         </div>
 
-        <!-- Age & City -->
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Age</label>
@@ -58,7 +70,6 @@
           </div>
         </div>
 
-        <!-- Relationship Goal -->
         <div>
           <label class="block text-xs font-semibold uppercase text-gray-600 mb-1">Relationship Goal</label>
           <select id="intent" required class="w-full px-3 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-white text-sm">
@@ -69,7 +80,6 @@
           </select>
         </div>
 
-        <!-- Submit Button -->
         <button type="submit" id="submitBtn"
                 class="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-xl shadow-md transition-all duration-200">
           Save & Start Swiping
@@ -78,24 +88,70 @@
     </div>
   </div>
 
-  <!-- Main App Container -->
-  <main id="appContainer" class="max-w-md mx-auto min-h-screen flex flex-col justify-between p-4 hidden">
-    <header class="flex justify-between items-center py-2">
-      <h1 class="text-xl font-black text-rose-600 tracking-wide">HabeshaMatch</h1>
-      <span id="userBadge" class="text-xs bg-rose-100 text-rose-700 font-semibold px-3 py-1 rounded-full"></span>
+  <!-- Main Swiping Application Container -->
+  <main id="appContainer" class="max-w-md w-full mx-auto flex-1 flex flex-col justify-between p-4 hidden">
+    <!-- Header -->
+    <header class="flex justify-between items-center py-2 border-b border-gray-200 mb-4">
+      <h1 class="text-2xl font-black text-rose-600 tracking-wide">HabeshaMatch</h1>
+      <span id="userBadge" class="text-xs bg-rose-100 text-rose-700 font-semibold px-3 py-1.5 rounded-full flex items-center gap-1"></span>
     </header>
 
-    <div class="my-auto bg-white rounded-3xl shadow-lg border border-gray-100 p-6 text-center space-y-4">
-      <img id="userAvatarPreview" class="w-28 h-28 rounded-full object-cover mx-auto shadow-md border-2 border-rose-500" src="" alt="Profile Photo">
-      <h2 id="userNameDisplay" class="text-2xl font-bold text-gray-800">You're All Set!</h2>
-      <p class="text-gray-500 text-sm">Welcome to Habesha Match. Your profile picture and details have been saved to Supabase.</p>
+    <!-- Card Container Deck -->
+    <div class="relative w-full flex-1 flex items-center justify-center my-2 min-h-[460px]">
+      
+      <!-- Profile Card -->
+      <div id="profileCard" class="card-enter absolute inset-0 bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col justify-between border border-gray-100">
+        <div class="relative w-full h-[320px] bg-gray-200">
+          <img id="cardImage" class="w-full h-full object-cover" src="" alt="Profile Photo">
+          <div class="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-black/80 to-transparent"></div>
+          <div class="absolute bottom-3 left-4 text-white">
+            <h2 class="text-2xl font-bold flex items-center gap-2">
+              <span id="cardName">Loading...</span>, <span id="cardAge">--</span>
+            </h2>
+            <p id="cardCity" class="text-xs text-gray-200 flex items-center gap-1 mt-0.5">📍 Addis Ababa</p>
+          </div>
+        </div>
+
+        <div class="p-4 space-y-2 flex-1 flex flex-col justify-between">
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-rose-500 bg-rose-50 px-2.5 py-1 rounded-md">Relationship Goal</span>
+            <p id="cardIntent" class="text-sm font-semibold text-gray-700 mt-1">Serious Relationship / Marriage</p>
+          </div>
+
+          <div class="text-xs text-gray-400 italic text-right">
+            Habesha Match Verified Member
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty Deck State -->
+      <div id="emptyDeck" class="hidden text-center p-8 bg-white rounded-3xl shadow-md border border-gray-100 space-y-4 max-w-sm">
+        <div class="w-16 h-16 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center text-3xl mx-auto">✨</div>
+        <h3 class="text-xl font-bold text-gray-800">No More Profiles!</h3>
+        <p class="text-sm text-gray-500">You've swiped through all active profiles in your area. Check back later for new matches.</p>
+        <button onclick="fetchProfiles()" class="px-5 py-2.5 bg-rose-600 text-white font-semibold text-sm rounded-xl shadow hover:bg-rose-700 transition-all">
+          Reload Profiles 🔄
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Swipe Action Buttons -->
+    <div id="actionButtons" class="flex justify-center items-center gap-6 py-4">
+      <button id="passBtn" onclick="swipe('pass')"
+              class="w-16 h-16 rounded-full bg-white text-gray-500 shadow-lg border border-gray-200 flex items-center justify-center text-2xl hover:scale-110 hover:bg-gray-50 transition-all active:scale-95">
+        ✕
+      </button>
+      <button id="likeBtn" onclick="swipe('like')"
+              class="w-16 h-16 rounded-full bg-rose-600 text-white shadow-lg shadow-rose-200 flex items-center justify-center text-2xl hover:scale-110 hover:bg-rose-700 transition-all active:scale-95">
+        ❤️
+      </button>
     </div>
   </main>
 
   <script>
     const SUPABASE_URL = "https://ubvukfxtuxbyajngpmyd.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_G6CMV5kJgKgTVIuuP0iM2w_TVQ2IpeC";
-    
     const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
     const onboardingModal = document.getElementById('onboardingModal');
@@ -103,18 +159,18 @@
     const profileForm = document.getElementById('profileForm');
     const userBadge = document.getElementById('userBadge');
     const errorBox = document.getElementById('errorBox');
-    const userAvatarPreview = document.getElementById('userAvatarPreview');
-    const userNameDisplay = document.getElementById('userNameDisplay');
 
-    function showError(msg) {
-      errorBox.innerText = msg;
-      errorBox.classList.remove('hidden');
-    }
+    const profileCard = document.getElementById('profileCard');
+    const emptyDeck = document.getElementById('emptyDeck');
+    const actionButtons = document.getElementById('actionButtons');
 
-    // Check local memory
+    let profiles = [];
+    let currentIndex = 0;
+
+    // Check existing session
     const savedUser = JSON.parse(localStorage.getItem('habesha_user_profile'));
     if (savedUser) {
-      showMainApp(savedUser.full_name, savedUser.avatar_url);
+      showMainApp(savedUser.full_name);
     }
 
     profileForm.addEventListener('submit', async (e) => {
@@ -129,7 +185,6 @@
         const avatarFileInput = document.getElementById('avatarFile');
         let avatarUrl = null;
 
-        // 1. Upload file to Supabase Storage if selected
         if (avatarFileInput.files.length > 0) {
           const file = avatarFileInput.files[0];
           const fileExt = file.name.split('.').pop();
@@ -139,11 +194,8 @@
             .from('avatars')
             .upload(fileName, file);
 
-          if (uploadError) {
-            throw new Error("Photo upload failed: " + uploadError.message);
-          }
+          if (uploadError) throw new Error("Photo upload failed: " + uploadError.message);
 
-          // Get Public URL
           const { data: publicUrlData } = supabaseClient.storage
             .from('avatars')
             .getPublicUrl(fileName);
@@ -151,7 +203,6 @@
           avatarUrl = publicUrlData.publicUrl;
         }
 
-        // 2. Insert record into profiles table
         const profileData = {
           full_name: document.getElementById('fullName').value.trim(),
           age: parseInt(document.getElementById('age').value),
@@ -167,10 +218,8 @@
 
         if (error) throw new Error("Database insert failed: " + error.message);
 
-        // Save locally
         localStorage.setItem('habesha_user_profile', JSON.stringify(profileData));
-
-        showMainApp(profileData.full_name, profileData.avatar_url);
+        showMainApp(profileData.full_name);
       } catch (err) {
         showError(err.message);
         submitBtn.disabled = false;
@@ -178,16 +227,72 @@
       }
     });
 
-    function showMainApp(name, avatar) {
+    function showMainApp(name) {
       onboardingModal.classList.add('hidden');
       appContainer.classList.remove('hidden');
       userBadge.innerText = `👋 ${name}`;
-      userNameDisplay.innerText = `Welcome, ${name}!`;
-      if (avatar) {
-        userAvatarPreview.src = avatar;
-      } else {
-        userAvatarPreview.src = 'https://via.placeholder.com/150?text=User';
+      fetchProfiles();
+    }
+
+    // Fetch Profiles from Supabase
+    async function fetchProfiles() {
+      profileCard.classList.remove('hidden');
+      emptyDeck.classList.add('hidden');
+      actionButtons.classList.remove('hidden');
+
+      try {
+        const { data, error } = await supabaseClient
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        profiles = data || [];
+        currentIndex = 0;
+        renderCurrentCard();
+      } catch (err) {
+        console.error("Failed to fetch profiles:", err);
       }
+    }
+
+    // Render Current Card
+    function renderCurrentCard() {
+      if (currentIndex >= profiles.length) {
+        profileCard.classList.add('hidden');
+        actionButtons.classList.add('hidden');
+        emptyDeck.classList.remove('hidden');
+        return;
+      }
+
+      const p = profiles[currentIndex];
+      document.getElementById('cardName').innerText = p.full_name || 'Anonymous';
+      document.getElementById('cardAge').innerText = p.age || '22';
+      document.getElementById('cardCity').innerText = `📍 ${p.city || 'Ethiopia'}`;
+      document.getElementById('cardIntent').innerText = p.intent || 'Dating';
+      document.getElementById('cardImage').src = p.avatar_url || 'https://via.placeholder.com/400x500?text=Habesha+Match';
+    }
+
+    // Swipe Card Action
+    function swipe(direction) {
+      if (currentIndex >= profiles.length) return;
+
+      if (direction === 'pass') {
+        profileCard.classList.add('card-swipe-left');
+      } else {
+        profileCard.classList.add('card-swipe-right');
+      }
+
+      setTimeout(() => {
+        currentIndex++;
+        profileCard.classList.remove('card-swipe-left', 'card-swipe-right');
+        renderCurrentCard();
+      }, 300);
+    }
+
+    function showError(msg) {
+      errorBox.innerText = msg;
+      errorBox.classList.remove('hidden');
     }
   </script>
 </body>
